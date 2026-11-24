@@ -1,0 +1,15 @@
+# /etc/toban/config.toml  (サンプル)
+[sheet]
+spreadsheet_id   = "ここにスプレッドシートのIDを貼る"
+credentials_file = "/etc/toban/service-account.json"
+roster_sheet     = "職員名簿"
+schedule_sheet   = "当番表"
+log_sheet        = "交代ログ"
+closed_sheet     = "休校日"
+
+[app]
+timezone = "Asia/Tokyo"
+fiscal_year_start_month = 4        # 年度の開始月
+reload_minutes = 10                # スプレッドシートを読み直す間隔
+buildings = ["1号館", "2号館"]
+weekdays = [0, 1, 2, 3, 4]         # 当番日の曜日(0=月)
