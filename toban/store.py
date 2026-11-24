@@ -232,7 +232,8 @@ class Store:
             self.pending_log.append(line)
 
     # ---- 交代 ----
-    def swap(self, b: int, d1: str, s1: str, d2: str, s2: str) -> dict:
+    def swap(self, b: int, d1: str, s1: str, d2: str, s2: str,
+             expect1: str = "", expect2: str = "") -> dict:
         if not (1 <= b <= len(self.buildings)):
             raise TobanError("館が正しくありません")
         if s1 not in SLOTS or s2 not in SLOTS:
@@ -256,6 +257,9 @@ class Store:
                 raise TobanError("担当者のいない枠は入れ替えできません")
             if n1 == n2:
                 raise TobanError("同じ人どうしは入れ替えできません")
+            # 画面を開いた後に他の人が交代していたら、入れ替えない(別の人を動かさない)
+            if (expect1 and expect1 != n1) or (expect2 and expect2 != n2):
+                raise TobanError("画面の内容が古くなっています。画面を更新してもう一度お試しください")
 
             new1, new2 = f1[1].copy(), f2[1].copy()
             if date1 == date2:

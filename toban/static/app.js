@@ -199,7 +199,7 @@
     const [a, c] = sel;
     if (!confirm(`${a.name}（${mdw(a.date)} ${SLOT_LABEL[a.slot]}）と\n${c.name}（${mdw(c.date)} ${SLOT_LABEL[c.slot]}）を入れ替えます。よろしいですか？`)) return;
     try {
-      await api("/api/swap", { b: B, a: { date: a.date, slot: a.slot }, c: { date: c.date, slot: c.slot } });
+      await api("/api/swap", { b: B, a: { date: a.date, slot: a.slot, name: a.name }, c: { date: c.date, slot: c.slot, name: c.name } });
       toast(`${a.name} と ${c.name} を入れ替えました`);
       mode = false; sel = [];
       await load();

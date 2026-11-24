@@ -123,7 +123,8 @@ def create_app(cfg: dict | None = None, backend=None, now_fn=None, start_thread=
         j = request.get_json(force=True)
         a, c = j.get("a") or {}, j.get("c") or {}
         res = store.swap(int(j.get("b", 0)), a.get("date", ""), a.get("slot", ""),
-                         c.get("date", ""), c.get("slot", ""))
+                         c.get("date", ""), c.get("slot", ""),
+                         a.get("name", ""), c.get("name", ""))
         return jsonify(res)
 
     @app.post("/api/admin/allocate")

@@ -169,3 +169,20 @@ def test_next_fiscal_year():
     assert any(x.date.year == 2027 and x.date.month == 4 for x in st.rows)
     assert any(x.date == date(2026, 11, 24) for x in st.rows)
 
+
+
+def test_swap_rejects_stale_screen():
+    app, st, _ = make()
+    c = app.test_client()
+    rows = [r for r in st.rows if r.b == 1]
+    a, b, d = rows[2], rows[6], rows[9]
+    A = {"date": a.date.isoformat(), "slot": "kagi", "name": a.kagi}
+    B = {"date": b.date.isoformat(), "slot": "kagi", "name": b.kagi}
+    D = {"date": d.date.isoformat(), "slot": "kagi", "name": d.kagi}
+    assert c.post("/api/swap", json={"b": 1, "a": A, "c": B}).status_code == 200
+    # 別の人の画面はまだ A の旧担当を表示している → 拒否される
+    r = c.post("/api/swap", json={"b": 1, "a": A, "c": D})
+    assert r.status_code == 400 and "古く" in r.json["error"]
+    cur = {x.date: x for x in st.rows if x.b == 1}
+    assert cur[d.date].kagi == D["name"]          # D の人は動いていない
+
