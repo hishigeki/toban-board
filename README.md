@@ -1,7 +1,11 @@
 # 当番ボード (TobanBoard)
 
+> **学習用のお手本として公開しています。** 学校の当番表の実例を題材に、「企画→設計→実装→テスト→運用」を一通り通した小さなWebシステムです。
+> このリポジトリの Git 履歴（コミット）は、完成後に作業の流れを再構成したものです（日付はすべて同じ日です）。実際の開発では、作りながら小まめにコミットしてください。
+> 画面や名簿に出てくる氏名は、すべて架空のサンプルです。
+
 鍵当番（1名）・ごみ当番（正副2名）を、1号館・2号館それぞれに自動で割り振り、ブラウザで見せるシステムです。
-Raspberry Pi（旧 kyujin-proxy）の上で Flask が動き、**データはすべて Google スプレッドシート**にあります。
+Raspberry Pi（古いSDカードのものでも可）の上で Flask が動き、**データはすべて Google スプレッドシート**にあります。
 Pi の SD カードには何も書き込みません。
 
 - 画面: `http://<Piのアドレス>/1`（1号館） / `/2`（2号館）。ログインなし・学内LAN専用
@@ -19,6 +23,8 @@ Pi の SD カードには何も書き込みません。
 | 交代ログ（自動） | 交代・再割り振りの記録 |
 
 名簿の列の並び・追加列は自由です（見出しの文字で探します）。
+
+**サンプルデータ**: `docs/sample/職員名簿.tsv`（20人・架空）と `docs/sample/休校日.tsv` を、Googleスプレッドシートのシート `職員名簿` `休校日` のA1セルへそのまま貼り付けると、すぐ試せます。「当番表」と「交代ログ」は作らなくても、初回の割り振りでシステムが自動で作ります。
 
 ## 2. Google 側（サービスアカウント）
 
@@ -84,7 +90,7 @@ sudo reboot
 
 **Windows（PowerShell）**
 ```
-git clone <このリポジトリのURL> toban-board
+git clone https://github.com/hishigeki/toban-board.git toban-board
 cd toban-board
 py -3.11 -m venv .venv
 .venv\Scripts\Activate.ps1
@@ -94,12 +100,33 @@ python -m toban
 ```
 **macOS / Linux**
 ```
-git clone <このリポジトリのURL> toban-board && cd toban-board
+git clone https://github.com/hishigeki/toban-board.git toban-board && cd toban-board
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 TOBAN_DEMO=1 PORT=8080 python -m toban
 ```
 ブラウザで `http://localhost:8080/1`（1号館）と `/2`（2号館）を開きます。デモ起動時は、起動した日から年度末までの当番表が自動で作られます（再起動すると消えます）。
+
+### 実際のスプレッドシートにつないで、PCで試す
+サービスアカウントの鍵（JSON）と設定ファイルを用意します（2章）。鍵と `config.toml` は **GitHubに上げない**でください（`.gitignore` で除外済み）。
+
+**Windows（PowerShell）**
+```
+copy config.example.toml config.toml        # spreadsheet_id と credentials_file を編集
+$env:TOBAN_CONFIG = "$PWD\config.toml"; $env:PORT = "8080"
+python -m toban
+```
+`credentials_file` には、鍵のJSONの場所（例: `C:/toban-board/service-account.json`）を書きます。鍵を `OneDrive` や Google ドライブの同期フォルダに置かないでください。
+つながるかだけ先に確かめるには:
+```
+python -c "import gspread; s=gspread.service_account('service-account.json').open_by_key('スプレッドシートID'); print([w.title for w in s.worksheets()])"
+```
+
+### 既知の制限
+- 交代の記録（交代ログ）をGoogleに書けなかったときは、Piのメモリに一時保管して10分ごとに再送します。保管中にPiが再起動・停電すると、その行は失われます（当番表そのものはシートに残ります）。
+- 認証はありません（学内LAN限定の想定）。操作者は記録せず、交代した2名だけを記録します。
+- 実際のGoogleスプレッドシート・Raspberry Pi 実機での長期運用は、このリポジトリのテストの対象外です。
+- メール送信・Googleカレンダー連携は未実装です。
 
 ### テスト
 ```
