@@ -46,13 +46,17 @@ main{max-width:1080px;margin:0 auto;padding:16px}
 .btn:disabled{opacity:.4;cursor:not-allowed}
 .modebar{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#e7f2ff;border:2px solid #7db7ee;border-radius:10px;padding:8px 12px;margin-bottom:8px;flex-wrap:wrap}
 
-.scroller{max-height:62vh;overflow:auto;position:relative;border:1px solid var(--line);border-radius:10px;scroll-behavior:smooth}
+.scroller{max-height:60vh;overflow-y:scroll;position:relative;border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px;scroll-behavior:smooth}
+.headrow{table-layout:fixed;border:1px solid var(--line);border-bottom:0;border-radius:10px 10px 0 0;width:calc(100% - 0px);padding-right:15px}
+.headrow th{background:var(--accent);padding:7px 12px;font-size:.8rem;color:var(--sub);text-align:left}
+.duties{table-layout:fixed}
+.duties col.c1{width:6.8em}.duties col.c2{width:3.2em}
 .month h3{position:sticky;top:0;z-index:2;margin:0;padding:7px 14px;background:var(--brand-d);color:#fff;font-size:.95rem}
 table{border-collapse:collapse;width:100%}
 .duties th,.duties td{padding:7px 12px;border-bottom:1px solid var(--line);text-align:left}
 .duties thead th{background:var(--accent);font-size:.8rem;color:var(--sub);font-weight:600}
-.duties td.date{white-space:nowrap;font-variant-numeric:tabular-nums;width:5.5em}
-.duties td.dow{width:2.5em;color:var(--sub)}
+.duties td.date{white-space:nowrap;font-variant-numeric:tabular-nums}
+.duties td.dow{color:var(--sub)}
 .duties tr.past{opacity:.5}
 .duties tr.today td{background:var(--today);font-weight:700}
 .duties tr.today td.date::before{content:"今日 ";font-size:.7rem;color:var(--brand-d)}

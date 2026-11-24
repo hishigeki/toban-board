@@ -2,6 +2,7 @@
   const B = Number(document.body.dataset.b);
   const DOW = "日月火水木金土";
   const SLOT_LABEL = { kagi: "鍵", gomi1: "ごみ(正)", gomi2: "ごみ(副)" };
+  const COLS = '<colgroup><col class="c1"><col class="c2"><col><col><col></colgroup>';
   const typeOf = (s) => (s === "kagi" ? "kagi" : "gomi");
   let S = null; // サーバーの状態
   let mode = false;
@@ -98,7 +99,7 @@
         if (cur) html += `</tbody></table></div>`;
         cur = ym;
         const [y, m] = ym.split("-");
-        html += `<div class="month" id="m-${ym}"><h3>${y}年${+m}月</h3><table class="duties"><thead><tr><th>日付</th><th>曜日</th><th>鍵</th><th>ごみ(正)</th><th>ごみ(副)</th></tr></thead><tbody>`;
+        html += `<div class="month" id="m-${ym}"><h3>${y}年${+m}月</h3><table class="duties">${COLS}<tbody>`;
       }
       const cls = r.date < S.today ? "past" : r.date === S.today ? "today" : r.date === S.tomorrow ? "tomorrow" : "";
       html += `<tr class="${cls}" id="r-${r.date}"><td class="date">${md(r.date)}</td><td class="dow">${r.dow}</td>
@@ -112,7 +113,7 @@
     const sc = $("scroller");
     let row = $("r-" + S.today) || [...sc.querySelectorAll("tr[id^=r-]")].find((tr) => tr.id.slice(2) >= S.today);
     if (!row) return;
-    const hdr = row.closest(".month").querySelector("h3").offsetHeight + 34;
+    const hdr = row.closest(".month").querySelector("h3").offsetHeight + 4;
     const y = row.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - hdr;
     sc.style.scrollBehavior = smooth ? "smooth" : "auto";
     sc.scrollTop = Math.max(0, y);
