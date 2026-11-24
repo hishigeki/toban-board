@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>当番ボード — {{ buildings[b-1] }}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body data-b="{{ b }}">
+<header class="top">
+  <div class="brand">当番ボード<span>鍵・ごみ当番表</span></div>
+  <nav class="bld">
+    {% for name in buildings %}
+    <a href="/{{ loop.index }}" class="{{ 'on' if loop.index == b else '' }}">{{ name }}</a>
+    {% endfor %}
+  </nav>
+  <div class="clock" id="clock"></div>
+</header>
+
+<div id="banner" class="banner" hidden></div>
+
+<main>
+  <section class="cards" id="cards"></section>
+
+  <nav class="tabs" id="tabs">
+    <button data-tab="table" class="on">当番表</button>
+    <button data-tab="counts">担当回数</button>
+    <button data-tab="log">変更になったこと <b id="logBadge" hidden></b></button>
+    <button data-tab="admin">管理</button>
+  </nav>
+
+  <section id="tab-table" class="tabpane">
+    <div class="toolbar">
+      <button id="btnToday" class="btn">今日へ</button>
+      <button id="btnMode" class="btn primary">変更</button>
+      <label class="find">名前を強調 <input id="find" type="search" placeholder="例: 田中"></label>
+    </div>
+    <div id="modebar" class="modebar" hidden>
+      <div id="modeMsg">入れ替えたい2名（同じ役割どうし）をタップしてください</div>
+      <div>
+        <button id="btnSwap" class="btn primary" disabled>交代</button>
+        <button id="btnCancel" class="btn">やめる</button>
+      </div>
+    </div>
+    <div id="scroller" class="scroller"></div>
+  </section>
+
+  <section id="tab-counts" class="tabpane" hidden>
+    <p class="note" id="countsNote"></p>
+    <div class="tablewrap"><table class="grid" id="countsTable"></table></div>
+  </section>
+
+  <section id="tab-log" class="tabpane" hidden>
+    <p class="note">入れ替えの履歴です（新しい順）。操作した人は記録していません。</p>
+    <div class="tablewrap"><table class="grid" id="logTable"></table></div>
+  </section>
+
+  <section id="tab-admin" class="tabpane" hidden>
+    <div class="adminbox">
+      <h3>名簿・当番表の管理（係用）</h3>
+      <p class="note">職員名簿シートを変更したら、まず「再読込して確認」で差分を見て、必要なら「今日以降を再割り振り」を押します。
+        交代済みの枠と過去分は変わりません。</p>
+      <div class="adminbtns">
+        <button id="btnReload" class="btn">名簿・当番表を再読込して確認</button>
+        <button id="btnAlloc" class="btn primary">今年度の今日以降を再割り振り</button>
+        <button id="btnAllocNext" class="btn">次年度の当番表を作成</button>
+      </div>
+      <dl class="status" id="adminStatus"></dl>
+    </div>
+  </section>
+</main>
+<div id="toast" class="toast" hidden></div>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
