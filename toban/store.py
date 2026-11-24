@@ -372,7 +372,7 @@ class Store:
 
             bname = self.buildings[b - 1]
             logs = [e for e in self.log_entries if e["building"] in (bname, "全館")]
-            logs = sorted(logs, key=lambda e: e["at"], reverse=True)[:300]
+            logs = sorted(reversed(logs), key=lambda e: e["at"], reverse=True)[:300]  # 同時刻は後のものが上
             return {
                 "now": now.strftime("%Y-%m-%d %H:%M:%S"),
                 "today": today.isoformat(),
