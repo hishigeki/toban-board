@@ -1,0 +1,25 @@
+[Unit]
+Description=TobanBoard (鍵・ごみ当番表)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=toban
+Group=toban
+WorkingDirectory=/opt/toban
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=TOBAN_CONFIG=/etc/toban/config.toml
+# 状態はスプレッドシートにあるので、worker は必ず1つ(メモリ上のキャッシュを共有するため)
+ExecStart=/opt/toban/venv/bin/gunicorn -w 1 --threads 4 -b 0.0.0.0:80 \
+  --access-logfile /dev/null --error-logfile - "toban.app:create_app()"
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+Restart=always
+RestartSec=5
+# ディスクへ書かせない
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
