@@ -170,7 +170,6 @@ def test_next_fiscal_year():
     assert any(x.date == date(2026, 11, 24) for x in st.rows)
 
 
-
 def test_swap_rejects_stale_screen():
     app, st, _ = make()
     c = app.test_client()
@@ -186,3 +185,142 @@ def test_swap_rejects_stale_screen():
     cur = {x.date: x for x in st.rows if x.b == 1}
     assert cur[d.date].kagi == D["name"]          # D の人は動いていない
 
+
+# ---------------------------------------------------------------- 追加テスト(異常系・境界)
+from toban.backends import MemoryBackend
+
+
+def _roster(rows):
+    return [["氏名", "鍵当番", "ごみ当番", "館"]] + rows
+
+
+def test_building_restricted_person_only_in_that_building():
+    rows = [[f"P{i}", "○", "○", ""] for i in range(10)] + [["専用1", "○", "○", "1号館"]]
+    app, st, _ = make(backend=MemoryBackend(roster=_roster(rows)))
+    for r in st.rows:
+        if r.b == 2:
+            assert "専用1" not in (r.kagi, r.gomi1, r.gomi2)
+    assert any("専用1" in (r.kagi, r.gomi1, r.gomi2) for r in st.rows if r.b == 1)
+
+
+def test_closed_days_are_excluded():
+    be = demo_backend()
+    be.closed.append(["2026-12-01", "創立記念日"])
+    app, st, _ = make(backend=be)
+    assert date(2026, 12, 1) not in {r.date for r in st.rows}
+    assert date(2026, 12, 2) in {r.date for r in st.rows}
+
+
+def test_not_enough_people_leaves_slots_empty_without_crash():
+    rows = [["A", "○", "", ""], ["B", "", "○", ""], ["C", "", "○", ""]]   # ごみは2人しかいない(2館×正副=4枠必要)
+    app, st, _ = make(backend=MemoryBackend(roster=_roster(rows)))
+    j = app.test_client().get("/api/state?b=1").json
+    assert any(r["gomi1"] == "" or r["gomi2"] == "" for r in j["rows"])
+    assert all(r["kagi"] in ("A", "") for r in j["rows"])        # 鍵は A だけ
+    for r in st.rows:                                             # 同日重複は起きない
+        names = [n for n in (r.kagi, r.gomi1, r.gomi2) if n]
+        assert len(names) == len(set(names))
+
+
+def test_no_eligible_staff_is_an_error():
+    be = MemoryBackend(roster=_roster([["A", "", "", ""]]))
+    app = create_app(load_config("/nonexistent"), be, start_thread=False,
+                     now_fn=lambda: datetime(2026, 11, 24, 9, 0, tzinfo=TZ))
+    r = app.test_client().post("/api/admin/allocate", json={})
+    assert r.status_code == 400 and "担当できる職員" in r.json["error"]
+
+
+def test_swap_same_person_rejected():
+    app, st, _ = make()
+    c = app.test_client()
+    rows = [r for r in st.rows if r.b == 1]
+    # ごみ(正)に同じ人がいる2日を探す
+    for i, a in enumerate(rows):
+        for b in rows[i + 1:]:
+            if a.gomi1 == b.gomi1:
+                r = c.post("/api/swap", json={"b": 1, "a": {"date": a.date.isoformat(), "slot": "gomi1"},
+                                              "c": {"date": b.date.isoformat(), "slot": "gomi1"}})
+                assert r.status_code == 400 and "同じ人" in r.json["error"]
+                return
+    # 偶然同じ人が無ければ、同じ枠を2回選ぶ異常系で代替
+    a = rows[0].date.isoformat()
+    assert c.post("/api/swap", json={"b": 1, "a": {"date": a, "slot": "kagi"}, "c": {"date": a, "slot": "kagi"}}).status_code == 400
+
+
+def test_swap_today_is_allowed():
+    app, st, _ = make()
+    c = app.test_client()
+    rows = [r for r in st.rows if r.b == 1]
+    today, other = rows[0], rows[3]
+    assert today.date == date(2026, 11, 24)
+    r = c.post("/api/swap", json={"b": 1, "a": {"date": today.date.isoformat(), "slot": "kagi"},
+                                  "c": {"date": other.date.isoformat(), "slot": "kagi"}})
+    assert r.status_code == 200
+
+
+def test_swap_gomi_roles_on_same_day():
+    app, st, _ = make()
+    c = app.test_client()
+    row = [r for r in st.rows if r.b == 1][4]
+    g1, g2 = row.gomi1, row.gomi2
+    d = row.date.isoformat()
+    r = c.post("/api/swap", json={"b": 1, "a": {"date": d, "slot": "gomi1"}, "c": {"date": d, "slot": "gomi2"}})
+    assert r.status_code == 200
+    cur = next(x for x in st.rows if x.b == 1 and x.date == row.date)
+    assert (cur.gomi1, cur.gomi2) == (g2, g1)
+
+
+def test_bad_building_and_bad_input():
+    app, st, _ = make()
+    c = app.test_client()
+    assert c.get("/9").status_code == 302                    # 存在しない館は1号館へ
+    assert c.get("/api/state?b=9").status_code == 400
+    assert c.post("/api/swap", json={"b": 1, "a": {}, "c": {}}).status_code == 400
+    assert c.post("/api/swap", json={"b": 1, "a": {"date": "2026-11-25", "slot": "x"},
+                                     "c": {"date": "2026-11-26", "slot": "kagi"}}).status_code == 400
+
+
+def test_healthz():
+    app, st, _ = make()
+    j = app.test_client().get("/healthz").json
+    assert j["ok"] is True and j["last_sync"]
+
+
+def test_reload_picks_up_manual_sheet_edit():
+    app, st, _ = make()
+    be = st.backend
+    row = be.schedule[1]
+    row[3] = "手修正さん"                                      # スプレッドシートを人が直接書き換えた想定
+    st.load()
+    first = next(r for r in st.rows if (r.b, r.date.isoformat()) == (1 if row[0] == "1号館" else 2, row[1]))
+    assert first.kagi == "手修正さん"
+
+
+def test_log_write_failure_is_retried():
+    app, st, _ = make()
+    c = app.test_client()
+    rows = [r for r in st.rows if r.b == 1]
+    a, b = rows[2], rows[6]
+    real = st.backend.append_log
+    state = {"fail": True}
+
+    def flaky(row):
+        if state["fail"]:
+            raise RuntimeError("一時的に書けない")
+        real(row)
+    st.backend.append_log = flaky
+    r = c.post("/api/swap", json={"b": 1, "a": {"date": a.date.isoformat(), "slot": "kagi"},
+                                  "c": {"date": b.date.isoformat(), "slot": "kagi"}})
+    assert r.status_code == 200 and len(st.pending_log) == 1      # 交代は成立、ログは保留
+    state["fail"] = False
+    st.retry_pending_log()
+    assert st.pending_log == [] and st.backend.log[-1][2] == "交代"
+
+
+def test_roster_error_is_reported_not_crash():
+    be = demo_backend()
+    app, st, _ = make(backend=be)
+    be.roster = [["名前", "鍵"], ["A", "○"]]                    # ごみ当番の列が無い
+    j = app.test_client().post("/api/admin/reload", json={})
+    assert j.status_code == 400 and "ごみ当番" in j.json["error"]
+    assert "ごみ当番" in app.test_client().get("/api/state?b=1").json["roster_error"]
