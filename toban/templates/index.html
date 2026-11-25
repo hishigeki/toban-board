@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body data-b="{{ b }}">
+{% if demo %}<div class="demo-note">デモ（架空のデータ）です。名前も当番もすべてダミーで、自由に変更して試せます。</div>{% endif %}
 <header class="top">
   <div class="brand">当番ボード<span>鍵・ごみ当番表</span></div>
   <nav class="bld">

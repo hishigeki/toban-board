@@ -121,7 +121,8 @@ def create_app(cfg: dict | None = None, backend=None, now_fn=None, start_thread=
     def page(b):
         if not 1 <= b <= nb:
             return redirect("/1")
-        return render_template("index.html", b=b, buildings=store.buildings)
+        return render_template("index.html", b=b, buildings=store.buildings,
+                               demo=os.environ.get("TOBAN_DEMO") == "1")
 
     @app.get("/healthz")
     def healthz():
