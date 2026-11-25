@@ -121,8 +121,12 @@ def create_app(cfg: dict | None = None, backend=None, now_fn=None, start_thread=
     def page(b):
         if not 1 <= b <= nb:
             return redirect("/1")
+        demo = os.environ.get("TOBAN_DEMO") == "1"
+        sid = (sh.get("spreadsheet_id") or "").strip()
+        # 管理タブの「スプレッドシートを開く」。閲覧・編集できるかはスプレッドシート側の共有設定で決まる
+        sheet_url = "" if demo or not sid else f"https://docs.google.com/spreadsheets/d/{sid}/edit"
         return render_template("index.html", b=b, buildings=store.buildings,
-                               demo=os.environ.get("TOBAN_DEMO") == "1")
+                               demo=demo, sheet_url=sheet_url)
 
     @app.get("/healthz")
     def healthz():

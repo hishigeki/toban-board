@@ -286,6 +286,17 @@ def test_healthz():
     assert j["ok"] is True and j["last_sync"]
 
 
+def test_admin_sheet_link_only_when_spreadsheet_is_set():
+    cfg = load_config("/nonexistent")
+    cfg["sheet"]["spreadsheet_id"] = "abc123"
+    app = create_app(cfg, demo_backend(), start_thread=False)
+    html = app.test_client().get("/1").get_data(as_text=True)
+    assert "https://docs.google.com/spreadsheets/d/abc123/edit" in html
+    cfg["sheet"]["spreadsheet_id"] = ""
+    app = create_app(cfg, demo_backend(), start_thread=False)
+    assert "docs.google.com" not in app.test_client().get("/1").get_data(as_text=True)
+
+
 def test_reload_picks_up_manual_sheet_edit():
     app, st, _ = make()
     be = st.backend

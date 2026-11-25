@@ -120,3 +120,4 @@ table{border-collapse:collapse;width:100%}
 /* --- 1号館・2号館を色で見分ける（1号館＝緑、2号館＝紫。画面全体の色が変わる） --- */
 body[data-b="1"]{--bg:#e6f3ee;--brand:#0b6b5c;--brand-d:#084f44;--accent:#dcefe8}
 body[data-b="2"]{--bg:#ece7f6;--brand:#5b3f9a;--brand-d:#42297a;--accent:#e2daf2}
+a.btn{display:inline-block;text-decoration:none;color:inherit;line-height:1.5}
