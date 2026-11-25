@@ -4,8 +4,12 @@ from __future__ import annotations
 import logging
 import os
 import threading
-import tomllib
 from zoneinfo import ZoneInfo
+
+try:  # Python 3.11 以上は標準。3.10 は tomli で代用
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover
+    import tomli as tomllib
 
 from flask import Flask, jsonify, redirect, render_template, request
 
@@ -35,10 +39,20 @@ DEFAULT_CONFIG = {
 
 def load_config(path: str | None = None) -> dict:
     cfg = {k: dict(v) for k, v in DEFAULT_CONFIG.items()}
-    path = path or os.environ.get("TOBAN_CONFIG", "/etc/toban/config.toml")
+    env_path = os.environ.get("TOBAN_CONFIG")
+    if not path and env_path and not os.path.exists(env_path):
+        # 環境変数で場所を指定したのに無いときは、黙って初期値で進めずに知らせる
+        raise FileNotFoundError(f"設定ファイルが見つかりません: {env_path}")
+    path = path or env_path or "/etc/toban/config.toml"
     if os.path.exists(path):
-        with open(path, "rb") as f:
-            user = tomllib.load(f)
+        try:
+            with open(path, "rb") as f:
+                user = tomllib.load(f)
+        except tomllib.TOMLDecodeError as e:
+            raise ValueError(
+                f"設定ファイル {path} の書き方が正しくありません: {e}\n"
+                "（Windowsのパスは \"C:/folder/key.json\" のように / で区切るか、'C:\\folder\\key.json' のように一重引用符で囲みます）"
+            ) from e
         for sec, vals in user.items():
             cfg.setdefault(sec, {}).update(vals)
     return cfg

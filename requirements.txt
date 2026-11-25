@@ -3,3 +3,5 @@ gunicorn>=22.0
 gspread>=6.0
 google-auth>=2.30
 jpholiday>=0.1.10
+tomli>=2.0; python_version < "3.11"
+tzdata; sys_platform == "win32"

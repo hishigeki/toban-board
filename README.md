@@ -9,7 +9,7 @@ Raspberry Pi（古いSDカードのものでも可）の上で Flask が動き�
 Pi の SD カードには何も書き込みません。
 
 - 画面: `http://<Piのアドレス>/1`（1号館） / `/2`（2号館）。ログインなし・学内LAN専用
-- 構成: Python 3.11+ / Flask / gunicorn（worker 1つ）/ gspread
+- 構成: Python 3.10+ / Flask / gunicorn（worker 1つ）/ gspread
 
 ## 1. スプレッドシートの準備
 
@@ -86,7 +86,7 @@ sudo reboot
 
 ## 6. 別のPCで動かす（開発・動作確認）
 
-スプレッドシートがなくても、デモデータ（メモリ上）で画面と交代操作を試せます。必要なもの: **Python 3.11 以上**、Git。
+スプレッドシートがなくても、デモデータ（メモリ上）で画面と交代操作を試せます。必要なもの: **Python 3.10 以上**、Git。
 
 **Windows（PowerShell）**
 ```
