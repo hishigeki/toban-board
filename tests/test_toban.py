@@ -297,6 +297,14 @@ def test_admin_sheet_link_only_when_spreadsheet_is_set():
     assert "docs.google.com" not in app.test_client().get("/1").get_data(as_text=True)
 
 
+def test_admin_sheet_link_in_demo_via_env(monkeypatch):
+    monkeypatch.setenv("TOBAN_SHEET_URL", "https://docs.google.com/spreadsheets/d/DUMMY/edit")
+    monkeypatch.setenv("TOBAN_DEMO", "1")
+    app = create_app(load_config("/nonexistent"), demo_backend(), start_thread=False)
+    html = app.test_client().get("/1").get_data(as_text=True)
+    assert "spreadsheets/d/DUMMY/edit" in html
+
+
 def test_reload_picks_up_manual_sheet_edit():
     app, st, _ = make()
     be = st.backend

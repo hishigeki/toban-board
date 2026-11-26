@@ -1,6 +1,7 @@
 # /etc/toban/config.toml  (サンプル)
 [sheet]
 spreadsheet_id   = "ここにスプレッドシートのIDを貼る"
+# sheet_url      = ""   # 管理タブのボタンの開き先を変えたいときだけ。普通は不要
 credentials_file = "/etc/toban/service-account.json"
 roster_sheet     = "職員名簿"
 schedule_sheet   = "当番表"

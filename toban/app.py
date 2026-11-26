@@ -28,6 +28,7 @@ DEFAULT_CONFIG = {
     },
     "sheet": {
         "spreadsheet_id": "",
+        "sheet_url": "",          # 管理タブのボタンの開き先。空なら spreadsheet_id から作る
         "credentials_file": "/etc/toban/service-account.json",
         "roster_sheet": "職員名簿",
         "schedule_sheet": "当番表",
@@ -122,9 +123,12 @@ def create_app(cfg: dict | None = None, backend=None, now_fn=None, start_thread=
         if not 1 <= b <= nb:
             return redirect("/1")
         demo = os.environ.get("TOBAN_DEMO") == "1"
+        # 管理タブの「スプレッドシートを開く」。閲覧・編集できるかはスプレッドシート側の共有設定で決まる。
+        # デモは環境変数 TOBAN_SHEET_URL で、ダミーデータのシートを指定する
         sid = (sh.get("spreadsheet_id") or "").strip()
-        # 管理タブの「スプレッドシートを開く」。閲覧・編集できるかはスプレッドシート側の共有設定で決まる
-        sheet_url = "" if demo or not sid else f"https://docs.google.com/spreadsheets/d/{sid}/edit"
+        sheet_url = (os.environ.get("TOBAN_SHEET_URL") or sh.get("sheet_url") or "").strip()
+        if not sheet_url and sid:
+            sheet_url = f"https://docs.google.com/spreadsheets/d/{sid}/edit"
         return render_template("index.html", b=b, buildings=store.buildings,
                                demo=demo, sheet_url=sheet_url)
 

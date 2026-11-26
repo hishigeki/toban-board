@@ -69,6 +69,7 @@
         <button id="btnAllocNext" class="btn">次年度の当番表を作成</button>
         {% if sheet_url %}<a id="btnSheet" class="btn" href="{{ sheet_url }}" target="_blank" rel="noopener noreferrer">スプレッドシートを開く ↗</a>{% endif %}
       </div>
+      {% if sheet_url and demo %}<p class="note">デモのシートは、ダミーの名簿を見せるためのものです。シートを編集しても、この画面には反映されません。</p>{% endif %}
       <dl class="status" id="adminStatus"></dl>
     </div>
   </section>
