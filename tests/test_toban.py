@@ -61,7 +61,7 @@ def test_allocation_rules():
 
 
 def test_allocation_balances_each_slot():
-    """鍵・ごみ(正)・ごみ(副)のそれぞれで、担当できる人の回数の差が1回以内。再割り振り後も同じ。"""
+    """鍵・ごみ(正)・ごみ(副)のそれぞれで、担当できる人の回数の差が1回以内（全体・館ごと）。再割り振り後も同じ。"""
     _, st, clock = make()
 
     def check():
@@ -70,6 +70,10 @@ def test_allocation_balances_each_slot():
             cnt = Counter(r.get(slot) for r in st.rows)
             vals = [cnt.get(n, 0) for n, p in ppl.items() if getattr(p, can)]
             assert max(vals) - min(vals) <= 1, (slot, dict(cnt))
+            for b in (1, 2):  # 画面の「担当回数」は館ごとなので、館ごとにも1回以内
+                cb = Counter(r.get(slot) for r in st.rows if r.b == b)
+                vb = [cb.get(n, 0) for n, p in ppl.items() if getattr(p, can)]
+                assert max(vb) - min(vb) <= 1, (b, slot, dict(cb))
         days = {}
         for r in st.rows:
             days.setdefault(r.date, []).extend(r.get(s) for s in ("kagi", "gomi1", "gomi2"))

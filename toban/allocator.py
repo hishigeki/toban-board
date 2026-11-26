@@ -1,7 +1,7 @@
 """当番の自動割り当て。
 
 ルール
-  * 鍵・ごみ(正)・ごみ(副)それぞれの担当回数を、担当できる人の間でできるだけ均等にする（差を1回以内に）
+  * 鍵・ごみ(正)・ごみ(副)それぞれの担当回数を、担当できる人の間で、全体でも館ごとでもできるだけ均等にする（差を1回以内に）
   * 連日（前後の当番日）の担当を避ける（人数が足りない場合のみ許容）
   * 同じ日に鍵とごみの両方、または両館に入らない
   * ごみの正副の組み合わせが偏らないようにする
@@ -149,11 +149,14 @@ def _rebalance(result, days, roster, on_day, fixed_slots, freeze_before, rnd) ->
     pmap = {p.name: p for p in roster}
     elig = {s: [p.name for p in roster if (p.kagi if s == "kagi" else p.gomi)] for s in SLOTS}
     cnt = {s: {n: 0 for n in elig[s]} for s in SLOTS}
-    for sl in result.values():
+    bl = sorted({b for b, _ in result})
+    cb = {(b, s): {n: 0 for n in elig[s]} for b in bl for s in SLOTS}  # 館ごとの回数
+    for (b, _d), sl in result.items():
         for s in SLOTS:
             n = sl[s]
             if n in cnt[s]:
                 cnt[s][n] += 1
+                cb[(b, s)][n] += 1
 
     def movable(b, d, s):
         return (freeze_before is None or d >= freeze_before) and (b, d, s) not in fixed_slots and result[(b, d)][s]
@@ -176,10 +179,12 @@ def _rebalance(result, days, roster, on_day, fixed_slots, freeze_before, rnd) ->
             on_day[d].discard(old)
             if old in cnt[s]:
                 cnt[s][old] -= 1
+                cb[(b, s)][old] -= 1
         if new:
             on_day[d].add(new)
             if new in cnt[s]:
                 cnt[s][new] += 1
+                cb[(b, s)][new] += 1
 
     def holdings(name, s):
         return [(b, d) for (b, d), sl in result.items() if sl[s] == name and movable(b, d, s)]
@@ -187,6 +192,7 @@ def _rebalance(result, days, roster, on_day, fixed_slots, freeze_before, rnd) ->
     def try_move(a, low, s) -> bool:
         mine = holdings(a, s)
         rnd.shuffle(mine)
+        mine.sort(key=lambda t: -(cb[(t[0], s)][a] - cb[(t[0], s)].get(low, 0)))  # 館ごとの差が大きい館から
         for b, d in mine:                      # 直接移す
             if can_take(low, b, d, s):
                 put(b, d, s, low)
@@ -203,7 +209,58 @@ def _rebalance(result, days, roster, on_day, fixed_slots, freeze_before, rnd) ->
                 put(b, d, s, a)                # 戻す
         return False
 
-    for _ in range(400):
+    def building_pass() -> bool:
+        """館ごとの回数も均す：(1) 担当を人から人へ移す (2) 同じ枠の2人の担当を入れ替える。
+        館ごとの差を重く（×2）、全体の差を軽く見て、ばらつきが減るときだけ動かす。"""
+        did = False
+        for s in SLOTS:
+            for (b, d), sl in list(result.items()):
+                if not movable(b, d, s):
+                    continue
+                x = sl[s]
+                if x not in cnt[s]:
+                    continue
+                c = cb[(b, s)]
+                best, best_gain = None, 0
+                for y in elig[s]:
+                    if y == x or not can_take(y, b, d, s):
+                        continue
+                    delta = 2 * (2 * (c[y] - c[x]) + 2) + 2 * (cnt[s][y] - cnt[s][x]) + 2
+                    if s != "kagi":  # ごみは(正)+(副)の合計も均す
+                        gy = cnt["gomi1"].get(y, 0) + cnt["gomi2"].get(y, 0)
+                        gx = cnt["gomi1"].get(x, 0) + cnt["gomi2"].get(x, 0)
+                        delta += 2 * (gy - gx) + 2
+                    gain = -delta
+                    if gain > best_gain:
+                        best, best_gain = y, gain
+                if best:
+                    put(b, d, s, best)
+                    did = True
+            # 入れ替え（全体の回数は変わらず、館ごとの回数だけ整う）
+            keys = [(b, d) for (b, d) in result if movable(b, d, s) and result[(b, d)][s] in cnt[s]]
+            rnd.shuffle(keys)
+            for i, (b1, d1) in enumerate(keys):
+                for (b2, d2) in keys[i + 1:]:
+                    x, y = result[(b1, d1)][s], result[(b2, d2)][s]
+                    if b1 == b2 or x == y:
+                        continue
+                    before = cb[(b1, s)][x] ** 2 + cb[(b1, s)][y] ** 2 + cb[(b2, s)][x] ** 2 + cb[(b2, s)][y] ** 2
+                    after = (cb[(b1, s)][x] - 1) ** 2 + (cb[(b1, s)][y] + 1) ** 2 \
+                        + (cb[(b2, s)][x] + 1) ** 2 + (cb[(b2, s)][y] - 1) ** 2
+                    if after >= before:
+                        continue
+                    put(b1, d1, s, "")
+                    put(b2, d2, s, "")
+                    if can_take(y, b1, d1, s) and can_take(x, b2, d2, s):
+                        put(b1, d1, s, y)
+                        put(b2, d2, s, x)
+                        did = True
+                    else:
+                        put(b1, d1, s, x)
+                        put(b2, d2, s, y)
+        return did
+
+    for _ in range(120):
         moved = False
         for s in SLOTS:
             names = sorted(elig[s], key=lambda n: cnt[s][n])
@@ -229,4 +286,5 @@ def _rebalance(result, days, roster, on_day, fixed_slots, freeze_before, rnd) ->
                 cnt["gomi2"][g2] -= 1; cnt["gomi2"][g1] += 1
                 moved = True
         if not moved:
-            break
+            if not building_pass():
+                break
