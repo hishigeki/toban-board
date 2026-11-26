@@ -131,9 +131,9 @@ python -c "import gspread; s=gspread.service_account('service-account.json').ope
 ### テスト
 ```
 pip install -r requirements-dev.txt
-python -m pytest tests/test_toban.py          # 画面なしのテスト（23件）
-playwright install chromium                   # 初回のみ
-python -m pytest tests                        # 画面テストを含む全件（34件）
+python -m pytest tests/test_toban.py          # 画面なしのテスト（25件）
+playwright install chromium                   # 初回のみ（画面テスト用のブラウザを入れる。これを先にやらないと画面テストは失敗する）
+python -m pytest tests                        # 画面テストを含む全件（36件）
 ```
 
 ### フォルダ構成
