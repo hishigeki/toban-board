@@ -78,7 +78,7 @@ sudo reboot
 
 ## 5. 割り振りルール
 
-1. 鍵・ごみそれぞれ、担当できる人の間で回数をできるだけ均等に
+1. 鍵・ごみ(正)・ごみ(副)それぞれ、担当できる人の間で回数の差を1回以内に（できるだけ均等に）
 2. 連日（前後の当番日）の担当を避ける（人数不足のときだけ許容）
 3. 同じ日に鍵とごみの両方、および1号館と2号館の両方に入らない
 4. ごみの正副の組み合わせが偏らないように、正・副の回数もならす
@@ -131,9 +131,9 @@ python -c "import gspread; s=gspread.service_account('service-account.json').ope
 ### テスト
 ```
 pip install -r requirements-dev.txt
-python -m pytest tests/test_toban.py          # 画面なしのテスト（25件）
+python -m pytest tests/test_toban.py          # 画面なしのテスト（26件）
 playwright install chromium                   # 初回のみ（画面テスト用のブラウザを入れる。これを先にやらないと画面テストは失敗する）
-python -m pytest tests                        # 画面テストを含む全件（36件）
+python -m pytest tests                        # 画面テストを含む全件（37件）
 ```
 
 ### フォルダ構成

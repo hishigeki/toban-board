@@ -60,6 +60,29 @@ def test_allocation_rules():
     assert max(gomi.values()) - min(gomi.values()) <= 1
 
 
+def test_allocation_balances_each_slot():
+    """鍵・ごみ(正)・ごみ(副)のそれぞれで、担当できる人の回数の差が1回以内。再割り振り後も同じ。"""
+    _, st, clock = make()
+
+    def check():
+        ppl = {p.name: p for p in st.roster}
+        for slot, can in (("kagi", "kagi"), ("gomi1", "gomi"), ("gomi2", "gomi")):
+            cnt = Counter(r.get(slot) for r in st.rows)
+            vals = [cnt.get(n, 0) for n, p in ppl.items() if getattr(p, can)]
+            assert max(vals) - min(vals) <= 1, (slot, dict(cnt))
+        days = {}
+        for r in st.rows:
+            days.setdefault(r.date, []).extend(r.get(s) for s in ("kagi", "gomi1", "gomi2"))
+        ds = sorted(days)
+        assert all(len(v) == len(set(v)) for v in days.values())      # 同日に重複しない
+        assert not any(set(days[a]) & set(days[b]) for a, b in zip(ds, ds[1:]))  # 連日なし
+
+    check()
+    clock["now"] = datetime(2026, 12, 10, 13, 0, tzinfo=TZ)
+    st.allocate()
+    check()
+
+
 def test_swap_ok_and_logged_and_persisted():
     app, st, _ = make()
     c = app.test_client()

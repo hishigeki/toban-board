@@ -1,7 +1,7 @@
 """当番の自動割り当て。
 
 ルール
-  * 鍵・ごみそれぞれの担当回数を、担当できる人の間でできるだけ均等にする
+  * 鍵・ごみ(正)・ごみ(副)それぞれの担当回数を、担当できる人の間でできるだけ均等にする（差を1回以内に）
   * 連日（前後の当番日）の担当を避ける（人数が足りない場合のみ許容）
   * 同じ日に鍵とごみの両方、または両館に入らない
   * ごみの正副の組み合わせが偏らないようにする
@@ -115,8 +115,8 @@ def allocate(
                 rest = i - last.get(p.name, -10_000)
                 key = (
                     near,
-                    c + 0.7 * pc,
-                    slot_cnt[s].get(p.name, 0),
+                    slot_cnt[s].get(p.name, 0) + 0.7 * pc,  # 鍵・正・副それぞれの回数を均す
+                    c,
                     total.get(p.name, 0),
                     -min(rest, 60),
                     rnd.random(),
@@ -133,4 +133,100 @@ def allocate(
                 pair[k] = pair.get(k, 0) + 1
         for n in on_day[d]:
             last[n] = i
+    fixed_slots = {(b, d, s) for (b, d), sl in fixed.items() for s, n in sl.items() if s in SLOTS and n}
+    _rebalance(result, days, roster, on_day, fixed_slots, freeze_before, rnd)
     return result
+
+
+def _rebalance(result, days, roster, on_day, fixed_slots, freeze_before, rnd) -> None:
+    """仕上げ：鍵・ごみ(正)・ごみ(副)の回数が人によって2回以上ちがう間、多い人の枠を少ない人に移す。
+
+    移すときは「担当できる人・同じ日に重複しない・連日にならない」を必ず守る。
+    直接移せないときは、間に一人はさんで（多い人→C、Cの別の日→少ない人）の2段で移す。
+    過去分・交代済みの枠は動かさない。
+    """
+    idx = {d: i for i, d in enumerate(days)}
+    pmap = {p.name: p for p in roster}
+    elig = {s: [p.name for p in roster if (p.kagi if s == "kagi" else p.gomi)] for s in SLOTS}
+    cnt = {s: {n: 0 for n in elig[s]} for s in SLOTS}
+    for sl in result.values():
+        for s in SLOTS:
+            n = sl[s]
+            if n in cnt[s]:
+                cnt[s][n] += 1
+
+    def movable(b, d, s):
+        return (freeze_before is None or d >= freeze_before) and (b, d, s) not in fixed_slots and result[(b, d)][s]
+
+    def can_take(name, b, d, s):
+        p = pmap.get(name)
+        if p is None or not p.can(slot_type(s), b) or name in on_day[d]:
+            return False
+        i = idx[d]
+        if i > 0 and name in on_day[days[i - 1]]:
+            return False
+        if i + 1 < len(days) and name in on_day[days[i + 1]]:
+            return False
+        return True
+
+    def put(b, d, s, new):
+        old = result[(b, d)][s]
+        result[(b, d)][s] = new
+        if old:
+            on_day[d].discard(old)
+            if old in cnt[s]:
+                cnt[s][old] -= 1
+        if new:
+            on_day[d].add(new)
+            if new in cnt[s]:
+                cnt[s][new] += 1
+
+    def holdings(name, s):
+        return [(b, d) for (b, d), sl in result.items() if sl[s] == name and movable(b, d, s)]
+
+    def try_move(a, low, s) -> bool:
+        mine = holdings(a, s)
+        rnd.shuffle(mine)
+        for b, d in mine:                      # 直接移す
+            if can_take(low, b, d, s):
+                put(b, d, s, low)
+                return True
+        for b, d in mine:                      # 間に一人（C）はさむ
+            for c in elig[s]:
+                if c in (a, low) or not can_take(c, b, d, s):
+                    continue
+                put(b, d, s, c)
+                for b2, e in holdings(c, s):
+                    if (b2, e) != (b, d) and can_take(low, b2, e, s):
+                        put(b2, e, s, low)
+                        return True
+                put(b, d, s, a)                # 戻す
+        return False
+
+    for _ in range(400):
+        moved = False
+        for s in SLOTS:
+            names = sorted(elig[s], key=lambda n: cnt[s][n])
+            pairs = [(a, lo) for lo in names for a in reversed(names) if cnt[s][a] - cnt[s][lo] >= 2]
+            pairs.sort(key=lambda t: -(cnt[s][t[0]] - cnt[s][t[1]]))
+            for a, lo in pairs:
+                if try_move(a, lo, s):
+                    moved = True
+                    break
+        # ごみ(正)と(副)の偏り：同じ日の正副を入れ替えると、鍵やごみ全体の回数は変えずに正副だけ整う
+        for (b, d), sl in result.items():
+            g1, g2 = sl["gomi1"], sl["gomi2"]
+            if not (g1 and g2) or not movable(b, d, "gomi1") or not movable(b, d, "gomi2"):
+                continue
+            if g1 not in cnt["gomi1"] or g2 not in cnt["gomi2"]:
+                continue
+            before = cnt["gomi1"][g1] ** 2 + cnt["gomi2"][g2] ** 2 + cnt["gomi1"][g2] ** 2 + cnt["gomi2"][g1] ** 2
+            after = (cnt["gomi1"][g1] - 1) ** 2 + (cnt["gomi2"][g2] - 1) ** 2 \
+                + (cnt["gomi1"][g2] + 1) ** 2 + (cnt["gomi2"][g1] + 1) ** 2
+            if after < before:
+                sl["gomi1"], sl["gomi2"] = g2, g1
+                cnt["gomi1"][g1] -= 1; cnt["gomi1"][g2] += 1
+                cnt["gomi2"][g2] -= 1; cnt["gomi2"][g1] += 1
+                moved = True
+        if not moved:
+            break
