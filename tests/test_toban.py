@@ -188,6 +188,16 @@ def test_two_buildings_independent_pages():
     assert j1["tomorrow_row"]["date"] == "2026-11-25"
 
 
+def test_next_duty_day_skips_days_off():
+    """画面の2枚目は「明日」ではなく、休みをとばした次の当番日。金曜なら翌週の月曜。"""
+    app, st, clock = make()
+    clock["now"] = datetime(2026, 11, 27, 8, 0, tzinfo=TZ)   # 金曜
+    j = app.test_client().get("/api/state?b=1").json
+    assert j["today_row"]["date"] == "2026-11-27"
+    assert j["tomorrow_row"] is None                        # 土曜は当番なし
+    assert j["next_row"]["date"] == "2026-11-30"            # 次の当番日は月曜
+
+
 def test_next_fiscal_year():
     app, st, _ = make()
     c = app.test_client()

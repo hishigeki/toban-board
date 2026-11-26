@@ -54,11 +54,12 @@ def open_page(page, server, b=1):
     page.wait_for_selector("tr.today")
 
 
-def test_ui_today_and_tomorrow_cards(page, server):
+def test_ui_today_and_next_cards(page, server):
     open_page(page, server)
     cards = page.locator(".card")
     assert cards.count() == 2
     assert "11/24(火)" in cards.nth(0).inner_text() and "11/25(水)" in cards.nth(1).inner_text()
+    assert "次の当番" in cards.nth(1).inner_text() and "明日" not in cards.nth(1).inner_text()
     assert page.locator("tr.today").count() == 1
 
 

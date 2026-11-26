@@ -54,10 +54,12 @@
     return `<div class="card ${cls}"><h2><span>${title}</span><b>${mdw(iso)}</b></h2>${body}</div>`;
   }
   function renderCards() {
-    const after = (iso) => S.rows.find((r) => r.date > iso);
-    $("cards").innerHTML =
-      card("today", `今日　${esc(S.building_name)}`, S.today, S.today_row, after(S.today)) +
-      card("tomorrow", `明日　${esc(S.building_name)}`, S.tomorrow, S.tomorrow_row, after(S.tomorrow));
+    // 2枚目は「明日」ではなく「次の当番日」（休校日・土日をとばして、次に当番がある日）
+    const nx = S.next_row;
+    const next = nx
+      ? card("tomorrow", `次の当番　${esc(S.building_name)}`, nx.date, nx, null)
+      : `<div class="card tomorrow"><h2><span>次の当番　${esc(S.building_name)}</span></h2><div class="empty">この先の当番はありません</div></div>`;
+    $("cards").innerHTML = card("today", `今日　${esc(S.building_name)}`, S.today, S.today_row, S.next_row) + next;
   }
 
   function renderBanner() {
@@ -101,7 +103,7 @@
         const [y, m] = ym.split("-");
         html += `<div class="month" id="m-${ym}"><h3>${y}年${+m}月</h3><table class="duties">${COLS}<tbody>`;
       }
-      const cls = r.date < S.today ? "past" : r.date === S.today ? "today" : r.date === S.tomorrow ? "tomorrow" : "";
+      const cls = r.date < S.today ? "past" : r.date === S.today ? "today" : (S.next_row && r.date === S.next_row.date) ? "tomorrow" : "";
       html += `<tr class="${cls}" id="r-${r.date}"><td class="date">${md(r.date)}</td><td class="dow">${r.dow}</td>
         <td>${nameCell(r, "kagi")}</td><td>${nameCell(r, "gomi1")}</td><td>${nameCell(r, "gomi2")}</td></tr>`;
     }
