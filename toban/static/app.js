@@ -132,7 +132,7 @@
   function renderCounts() {
     $("countsNote").textContent = `${S.fiscal_year}年度の予定回数です（括弧内は今日以降の残り）。回数が「−」の列は担当できません。`;
     const cell = (c, ok) => (!ok && !c.total ? `<td class="n dim">−</td>` : `<td class="n">${c.total}<span class="dim"> (${c.left})</span></td>`);
-    let h = `<thead><tr><th>氏名</th><th>鍵</th><th>ごみ(正)</th><th>ごみ(副)</th><th>次回 鍵</th><th>次回 ごみ</th></tr></thead><tbody>`;
+    let h = `<thead><tr><th>氏名</th><th class="n">鍵</th><th class="n">ごみ(正)</th><th class="n">ごみ(副)</th><th>次回 鍵</th><th>次回 ごみ</th></tr></thead><tbody>`;
     for (const e of S.counts) {
       const hit = findText && e.name.includes(findText) ? ' class="hit"' : "";
       h += `<tr${hit}><td>${esc(e.name)}${e.in_roster ? "" : ' <span class="out">(名簿外)</span>'}</td>
