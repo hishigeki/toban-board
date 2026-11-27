@@ -8,7 +8,7 @@
 Raspberry Pi（古いSDカードのものでも可）の上で Flask が動き、**データはすべて Google スプレッドシート**にあります。
 Pi の SD カードには何も書き込みません。
 
-- 画面: `http://<Piのアドレス>/1`（1号館） / `/2`（2号館）。ログインなし・学内LAN専用
+- 画面: `http://<Piのアドレス>/1`（1号館） / `/2`（2号館）。学内LANからはログインなし。校外に公開するときの認証は、7章
 - 構成: Python 3.10+ / Flask / gunicorn（worker 1つ）/ gspread
 
 ## 1. スプレッドシートの準備
@@ -124,16 +124,16 @@ python -c "import gspread; s=gspread.service_account('service-account.json').ope
 
 ### 既知の制限
 - 交代の記録（交代ログ）をGoogleに書けなかったときは、Piのメモリに一時保管して10分ごとに再送します。保管中にPiが再起動・停電すると、その行は失われます（当番表そのものはシートに残ります）。
-- 認証はありません（学内LAN限定の想定）。操作者は記録せず、交代した2名だけを記録します。
+- 標準のままでは認証がありません（学内LAN限定の想定）。校外に出すときは7章の認証を使います。操作者は記録せず、交代した2名だけを記録します。
 - 実際のGoogleスプレッドシート・Raspberry Pi 実機での長期運用は、このリポジトリのテストの対象外です。
 - メール送信・Googleカレンダー連携は未実装です。
 
 ### テスト
 ```
 pip install -r requirements-dev.txt
-python -m pytest tests/test_toban.py          # 画面なしのテスト（26件）
+python -m pytest tests/test_toban.py          # 画面なしのテスト（27件）
 playwright install chromium                   # 初回のみ（画面テスト用のブラウザを入れる。これを先にやらないと画面テストは失敗する）
-python -m pytest tests                        # 画面テストを含む全件（37件）
+python -m pytest tests                        # 画面テストと、発展問題（認証）のテストを含む全件（81件）
 ```
 
 ### フォルダ構成
@@ -143,7 +143,31 @@ toban/calendar_util.py  年度・当番日（祝日・休校日）の計算
 toban/backends.py       データの置き場所（Googleスプレッドシート / デモ用メモリ）
 toban/store.py          状態管理（読み込み・交代・割り振り・集計・ログ）
 toban/app.py            Flask アプリ（画面とAPI）
+toban/auth.py           パスワード認証（発展問題。設定したときだけ働く）
 toban/templates, static 画面（HTML / CSS / JavaScript）
 tests/                  自動テスト
 deploy/                 Raspberry Pi 用（systemd・セットアップスクリプト）
 ```
+
+## 7. 校外に公開するときの認証
+
+学内LANだけで使うなら、認証は要りません。校外（自宅・携帯電話の回線）からも開けるようにするときは、次のどちらかを使います。
+
+**① 前段の nginx で BASIC認証をかける**（アプリは変更しない）。校内のアドレスだけパスワードを省き、校外にはユーザー名とパスワードを求めます。
+
+```nginx
+server {
+    # ...（証明書・proxy_pass などは既存のまま）
+    satisfy any;
+    allow 192.168.x.0/24;          # 校内のアドレス帯を並べる
+    deny all;
+    auth_basic "TobanBoard";
+    auth_basic_user_file /etc/nginx/.htpasswd-toban;   # htpasswd で作る。GitHub には置かない
+    proxy_set_header Authorization "";                  # ユーザー名とパスワードをアプリへ渡さない
+}
+```
+
+- 校内のPCと校外のスマホ（携帯回線）の両方から開き、nginx のアクセスログに出る送信元のアドレスを見て、`allow` に入れる範囲を決めてください。
+- `htpasswd` のファイルは `chmod 640`、所有者を `root:www-data` にします。
+
+**② アプリ側でログインさせる**（発展問題）。`toban/auth.py` が、`TOBAN_PASSWORD_HASH` を設定したときだけ働きます。未設定なら、これまでと何も変わりません。入力サイズの上限、総当たりの制限、`X-Forwarded-For` の扱い、CSRF対策などを、テストで確かめています。設定と守りの一覧は `docs/auth.md` を見てください。①と②は同時に使いません。
