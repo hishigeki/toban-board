@@ -9,6 +9,8 @@ Group=toban
 WorkingDirectory=/opt/toban
 Environment=PYTHONDONTWRITEBYTECODE=1
 Environment=TOBAN_CONFIG=/etc/toban/config.toml
+# アプリ側の認証（発展問題）を使うときだけ、このファイルを作る（root・権限600）。無ければ何も変わらない
+EnvironmentFile=-/etc/toban/auth.env
 # 状態はスプレッドシートにあるので、worker は必ず1つ(メモリ上のキャッシュを共有するため)
 ExecStart=/opt/toban/venv/bin/gunicorn -w 1 --threads 4 -b 0.0.0.0:80 \
   --access-logfile /dev/null --error-logfile - "toban.app:create_app()"

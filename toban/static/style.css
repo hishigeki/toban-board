@@ -122,3 +122,12 @@ table{border-collapse:collapse;width:100%}
 body[data-b="1"]{--bg:#e6f3ee;--brand:#0b6b5c;--brand-d:#084f44;--accent:#dcefe8}
 body[data-b="2"]{--bg:#ece7f6;--brand:#5b3f9a;--brand-d:#42297a;--accent:#e2daf2}
 a.btn{display:inline-block;text-decoration:none;color:inherit;line-height:1.5}
+
+/* --- ログイン画面（発展問題: アプリ側の認証） --- */
+.login-page{display:grid;place-items:center;min-height:100vh;background:var(--bg,#f3f6f8)}
+.login{background:#fff;border:1px solid var(--line,#d5dde3);border-radius:14px;padding:26px 28px;width:min(92vw,340px)}
+.login h1{margin:0 0 6px;font-size:1.3rem}
+.login label{display:block;margin:12px 0}
+.login input[type=password]{display:block;width:100%;box-sizing:border-box;margin-top:6px;padding:10px;font:inherit;border:1px solid var(--line,#d5dde3);border-radius:8px}
+.login .btn{width:100%}
+.login-error{background:#fdecea;border:1px solid #f1aeb5;border-radius:8px;padding:8px 10px;margin:10px 0}

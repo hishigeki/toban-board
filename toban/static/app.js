@@ -21,8 +21,10 @@
   }
 
   async function api(url, body) {
-    const opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+    // X-Requested-With は、他のサイトの画面から勝手に送らせないための目印（アプリ側の認証を使うとき、サーバーが確かめる）
+    const opt = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json", "X-Requested-With": "toban" }, body: JSON.stringify(body) };
     const r = await fetch(url, opt);
+    if (r.status === 401) { location.href = "/login?next=" + encodeURIComponent(location.pathname); throw new Error("ログインが必要です"); }
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(j.error || `エラー(${r.status})`);
     return j;

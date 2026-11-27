@@ -13,6 +13,7 @@ except ModuleNotFoundError:  # pragma: no cover
 
 from flask import Flask, jsonify, redirect, render_template, request
 
+from .auth import init_auth
 from .backends import MemoryBackend, SheetsBackend
 from .store import Store, TobanError
 
@@ -100,6 +101,7 @@ def create_app(cfg: dict | None = None, backend=None, now_fn=None, start_thread=
     app = Flask(__name__)
     app.json.ensure_ascii = False
     app.config["STORE"] = store
+    init_auth(app)      # 発展問題: TOBAN_PASSWORD_HASH があるときだけ、アプリ側の認証が働く（toban/auth.py）
     nb = len(store.buildings)
 
     @app.errorhandler(TobanError)
